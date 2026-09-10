@@ -25,92 +25,93 @@ jobs:
      - name: Проверка, что всё на месте
        run: echo "Базовый пайплайн работает"
   secrets-scan:
-      name: Поиск секретов (Gitleaks)
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-          with:
-            fetch-depth: 0   # нужна вся история для поиска секретов
-  
-        - name: Запустить Gitleaks
-          uses: gitleaks/gitleaks-action@v2
+    name: Поиск секретов (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # нужна вся история для поиска секретов
+
+      - name: Запустить Gitleaks
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e
   sast:
-      name: SAST (Semgrep)
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-  
-        - name: Установить Semgrep
-          run: pip install semgrep
-  
-        - name: Запустить Semgrep и сохранить отчёт
-          run: semgrep scan --config auto --sarif --output semgrep.sarif || true
-          # "|| true" на старте, чтобы находки пока не роняли сборку
-  
-        - name: Сохранить отчёт как артефакт
-          uses: actions/upload-artifact@v4
-          with:
-            name: semgrep-report
-            path: semgrep.sarif
+    name: SAST (Semgrep)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Установить Semgrep
+        run: pip install semgrep
+
+      - name: Запустить Semgrep и сохранить отчёт
+        run: semgrep scan --config auto --sarif --output semgrep.sarif || true
+        # "|| true" на старте, чтобы находки пока не роняли сборку
+
+      - name: Сохранить отчёт как артефакт
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: semgrep.sarif
   sca:
-      name: SCA - зависимости (Trivy)
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-  
-        - name: Trivy - скан файловой системы (зависимости)
-          uses: aquasecurity/trivy-action@0.28.0   # ЗАМЕНИ на commit-хэш, см. Шаг 7
-          with:
-            scan-type: 'fs'
-            scan-ref: '.'
-            format: 'sarif'
-            output: 'trivy-deps.sarif'
-            severity: 'CRITICAL,HIGH'
-  
-        - name: Сохранить отчёт
-          uses: actions/upload-artifact@v4
-          with:
-            name: trivy-deps-report
-            path: trivy-deps.sarif
+    name: SCA - зависимости (Trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy - скан файловой системы (зависимости)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25   # v0.36.0 — пиннинг к хэшу (см. Шаг 7)
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-deps.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Сохранить отчёт
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-deps-report
+          path: trivy-deps.sarif
   image-scan:
-      name: Сборка и скан образа (Trivy)
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-  
-        - name: Собрать Docker-образ Juice Shop
-          run: docker build -t juice-shop:test .
-  
-        - name: Trivy - скан собранного образа
-          uses: aquasecurity/trivy-action@0.28.0   # ЗАМЕНИ на commit-хэш, см. Шаг 7
-          with:
-            scan-type: 'image'
-            image-ref: 'juice-shop:test'
-            format: 'sarif'
-            output: 'trivy-image.sarif'
-            severity: 'CRITICAL,HIGH'
-  
-        - name: Сохранить отчёт
-          uses: actions/upload-artifact@v4
-          with:
-            name: trivy-image-report
-            path: trivy-image.sarif
+    name: Сборка и скан образа (Trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Собрать Docker-образ Juice Shop
+        run: docker build -t juice-shop:test .
+
+      - name: Trivy - скан собранного образа
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25   # v0.36.0 — пиннинг к хэшу (см. Шаг 7)
+        with:
+          scan-type: 'image'
+          image-ref: 'juice-shop:test'
+          format: 'sarif'
+          output: 'trivy-image.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Сохранить отчёт
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image-report
+          path: trivy-image.sarif
   dast:
-      name: DAST (OWASP ZAP)
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-  
-        - name: Запустить Juice Shop в контейнере
-          run: |
-            docker run -d --name juiceshop -p 3000:3000 bkimminich/juice-shop
-            # подождать, пока приложение поднимется
-            for i in $(seq 1 30); do
-              if curl -s http://localhost:3000 >/dev/null; then echo "up"; break; fi
-              sleep 5
-            done
-  
-        - name: ZAP Baseline Scan (быстрая проверка)
-          uses: zaproxy/action-baseline@v0.12.0   # ЗАМЕНИ на commit-хэш, см. Шаг 7
-          with:
-            target: 'http://localhost:3000'
+    name: DAST (OWASP ZAP)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Запустить Juice Shop в контейнере
+        run: |
+          docker run -d --name juiceshop -p 3000:3000 bkimminich/juice-shop
+          # подождать, пока приложение поднимется
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:3000 >/dev/null; then echo "up"; break; fi
+            sleep 5
+          done
+
+      - name: ZAP Baseline Scan (быстрая проверка)
+        uses: zaproxy/action-baseline@v0.12.0   # ЗАМЕНИ на commit-хэш, см. Шаг 7
+        with:
+          target: 'http://localhost:3000'
+          allow_issue_writing: false   # не создавать GitHub Issue, только отчёт-артефакт
