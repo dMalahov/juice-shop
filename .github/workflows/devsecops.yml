@@ -109,8 +109,10 @@ jobs:
 
       - name: ZAP Full Scan (ограниченный по времени)
         run: |
+          mkdir -p "${{ github.workspace }}/zap-out"
+          chmod 777 "${{ github.workspace }}/zap-out"
           docker run --rm --network=host \
-            -v ${{ github.workspace }}:/zap/wrk/:rw \
+            -v "${{ github.workspace }}/zap-out":/zap/wrk/:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py \
             -t http://localhost:3000 \
             -m 3 -I \
@@ -122,6 +124,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zap-report
-          path: |
-            report_json.json
-            report_html.html
+          path: zap-out/
