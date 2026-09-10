@@ -1,0 +1,26 @@
+name: DevSecOps Pipeline
+
+# Запускать при каждом пуше и при pull request
+on:
+ push:
+ pull_request:
+ workflow_dispatch:   # даёт кнопку "запустить вручную"
+
+jobs:
+ build:
+   name: Сборка приложения
+   runs-on: ubuntu-latest
+   steps:
+     - name: Забрать код из репозитория
+       uses: actions/checkout@v4
+
+     - name: Установить Node.js
+       uses: actions/setup-node@v4
+       with:
+         node-version: '20'
+
+     - name: Установить зависимости
+       run: npm install --ignore-scripts
+
+     - name: Проверка, что всё на месте
+       run: echo "Базовый пайплайн работает"
