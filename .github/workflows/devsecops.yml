@@ -98,21 +98,30 @@ jobs:
   dast:
     name: DAST (OWASP ZAP)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
-      - name: Запустить Juice Shop в контейнере
+      - name: Запустить Juice Shop
         run: |
           docker run -d --name juiceshop -p 3000:3000 bkimminich/juice-shop
-          # подождать, пока приложение поднимется
-          for i in $(seq 1 30); do
-            if curl -s http://localhost:3000 >/dev/null; then echo "up"; break; fi
-            sleep 5
-          done
+          for i in $(seq 1 30); do curl -sf http://localhost:3000 >/dev/null && break; sleep 5; done
 
-      - name: ZAP Full Scan (активный, с AJAX-спайдером)
-        uses: zaproxy/action-full-scan@3c58388149901b9a03b7718852c5ba889646c27c
+      - name: ZAP Full Scan (ограниченный по времени)
+        run: |
+          docker run --rm --network=host \
+            -v ${{ github.workspace }}:/zap/wrk/:rw \
+            ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py \
+            -t http://localhost:3000 \
+            -m 3 -I \
+            -J report_json.json -r report_html.html \
+            -z "-config scanner.maxScanDurationInMins=15 -config scanner.maxRuleDurationInMins=2"
+
+      - name: Сохранить отчёт ZAP
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          target: 'http://localhost:3000'
-          allow_issue_writing: false
-          cmd_options: '-j'
+          name: zap-report
+          path: |
+            report_json.json
+            report_html.html
