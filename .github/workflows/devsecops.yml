@@ -107,7 +107,7 @@ jobs:
         run: |
           docker run -d --name juiceshop -p 3000:3000 bkimminich/juice-shop
           for i in $(seq 1 30); do curl -sf http://localhost:3000 >/dev/null && break; sleep 5; done
-      - name: ZAP Full Scan (гейт: без -I, падает при находках)
+      - name: "ZAP Full Scan (гейт: без -I, падает при находках)"
         run: |
           mkdir -p "${{ github.workspace }}/zap-out"
           chmod 777 "${{ github.workspace }}/zap-out"
@@ -131,4 +131,4 @@ jobs:
     needs: [secrets-scan, sast, sca, image-scan, dast]
     steps:
       - name: Все проверки пройдены
-        run: echo "Quality gate passed: критических и высоких находок не обнаружено"
+        run: echo 'Quality gate passed - критических и высоких находок не обнаружено'
